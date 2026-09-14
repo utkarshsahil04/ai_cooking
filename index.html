@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cooking Recipe Assistant - Smart Ingredient Detector</title>
+    <meta name="description" content="Detect fruits and vegetables using computer vision and get instant, matching recipe suggestions.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="badge">
+                <span>✦</span> Computer Vision & AI Recipes
+            </div>
+            <h1>Smart Kitchen Assistant</h1>
+            <p>Snap or upload a photo of your vegetables and fruits. Our YOLO vision model detects your ingredients and curates the best recipes you can make right now.</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Upload Panel -->
+            <section class="glass-panel" id="uploadCard">
+                <form id="uploadForm">
+                    <div class="upload-zone" id="dropZone">
+                        <div class="upload-icon">📷</div>
+                        <h3>Upload ingredient photo</h3>
+                        <p>Drag and drop your image here, or <strong>click to browse</strong></p>
+                        <input type="file" id="imageInput" name="image" accept="image/*" required>
+                    </div>
+
+                    <!-- Image Preview Area -->
+                    <div class="preview-container" id="previewContainer">
+                        <img id="imagePreview" alt="Selected Produce Preview">
+                        <div class="scanner-laser" id="scannerLaser"></div>
+                    </div>
+
+                    <!-- Quick Sample Buttons -->
+                    <div class="quick-samples">
+                        <span>Try sample:</span>
+                        <button type="button" class="sample-btn" data-sample="samples/OIP.jpeg">Sample 1 (Produce)</button>
+                        <button type="button" class="sample-btn" data-sample="samples/OIP (1).jpeg">Sample 2 (Vegetables)</button>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="analyzeBtn" disabled>
+                        <span id="btnText">Detect Ingredients & Find Recipes</span>
+                    </button>
+                </form>
+
+                <!-- Error Box -->
+                <div class="alert-box error" id="errorBox"></div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="glass-panel results-section" id="resultsSection">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span>🥕</span> Detected Ingredients
+                    </h2>
+                    <span id="itemsCountBadge" class="badge">0 found</span>
+                </div>
+                <div class="ingredients-tags" id="detectedItemsList"></div>
+
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span>📖</span> Recommended Recipes
+                    </h2>
+                </div>
+                <div class="recipes-grid" id="recipesGrid"></div>
+
+                <!-- Chef's Tip Box -->
+                <div class="tip-box" id="tipBox">
+                    <span class="tip-icon">💡</span>
+                    <span id="tipContent">Tip: Combine leftover vegetables into a nutritious soup or stir-fry!</span>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const imageInput = document.getElementById('imageInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const scannerLaser = document.getElementById('scannerLaser');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const btnText = document.getElementById('btnText');
+        const uploadForm = document.getElementById('uploadForm');
+        const errorBox = document.getElementById('errorBox');
+        
+        const resultsSection = document.getElementById('resultsSection');
+        const detectedItemsList = document.getElementById('detectedItemsList');
+        const itemsCountBadge = document.getElementById('itemsCountBadge');
+        const recipesGrid = document.getElementById('recipesGrid');
+        const tipBox = document.getElementById('tipBox');
+        const tipContent = document.getElementById('tipContent');
+
+        let selectedFile = null;
+
+        // Click on dropZone triggers hidden input
+        dropZone.addEventListener('click', () => imageInput.click());
+
+        // Drag & Drop handlers
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        // Quick sample images handling
+        document.querySelectorAll('.sample-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const sampleUrl = btn.getAttribute('data-sample');
+                try {
+                    btnText.innerHTML = '<span class="spinner"></span> Loading sample...';
+                    analyzeBtn.disabled = true;
+                    const res = await fetch(sampleUrl);
+                    const blob = await res.blob();
+                    const filename = sampleUrl.split('/').pop();
+                    const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+                    handleFileSelect(file);
+                } catch (err) {
+                    showError("Could not load sample image: " + err.message);
+                } finally {
+                    btnText.textContent = 'Detect Ingredients & Find Recipes';
+                    analyzeBtn.disabled = false;
+                }
+            });
+        });
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showError("Please select a valid image file (JPG, PNG, WebP).");
+                return;
+            }
+            hideError();
+            selectedFile = file;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                previewContainer.style.display = 'block';
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedFile) {
+                showError("Please select an image first.");
+                return;
+            }
+
+            hideError();
+            setLoading(true);
+
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Server error occurred during image processing.');
+                }
+
+                displayResults(data);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                analyzeBtn.disabled = true;
+                btnText.innerHTML = '<span class="spinner"></span> Analyzing with YOLO Model...';
+                scannerLaser.style.display = 'block';
+            } else {
+                analyzeBtn.disabled = false;
+                btnText.textContent = 'Detect Ingredients & Find Recipes';
+                scannerLaser.style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+
+        function hideError() {
+            errorBox.style.display = 'none';
+            errorBox.textContent = '';
+        }
+
+        const ingredientEmojis = {
+            tomato: '🍅', potato: '🥔', carrot: '🥕', onion: '🧅', garlic: '🧄',
+            broccoli: '🥦', cabbage: '🥬', lettuce: '🥗', cucumber: '🥒',
+            bell_pepper: '🫑', 'bell pepper': '🫑', corn: '🌽', mushroom: '🍄',
+            apple: '🍎', ginger: '🫚', pumpkin: '🎃', spinach: '🍃', celery: '🥬'
+        };
+
+        function getEmoji(item) {
+            const key = item.toLowerCase().replace(/_/g, ' ');
+            return ingredientEmojis[key] || '🥑';
+        }
+
+        function displayResults(data) {
+            detectedItemsList.innerHTML = '';
+            recipesGrid.innerHTML = '';
+
+            const items = data.detectedItems || [];
+            itemsCountBadge.textContent = `${items.length} detected`;
+
+            if (items.length === 0) {
+                detectedItemsList.innerHTML = '<p style="color: var(--text-muted);">No vegetable or fruit ingredients detected. Try a clearer close-up photo.</p>';
+            } else {
+                items.forEach(item => {
+                    const tag = document.createElement('div');
+                    tag.className = 'ingredient-tag';
+                    tag.innerHTML = `<span>${getEmoji(item)}</span> ${item}`;
+                    detectedItemsList.appendChild(tag);
+                });
+            }
+
+            // Structured recipes rendering
+            if (data.recipes && data.recipes.length > 0) {
+                data.recipes.forEach(recipe => {
+                    const card = document.createElement('div');
+                    card.className = 'recipe-card';
+
+                    let badgeClass = 'high';
+                    if (recipe.score < 50) badgeClass = 'low';
+                    else if (recipe.score < 80) badgeClass = 'medium';
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="recipe-card-header">
+                                <h3 class="recipe-name">${recipe.name}</h3>
+                                <span class="match-badge ${badgeClass}">${recipe.score}% Match</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: ${recipe.score}%"></div>
+                            </div>
+                            <div class="recipe-details">
+                                <div class="detail-row">
+                                    <span>✓</span> <strong>${recipe.matching_ingredients} of ${recipe.total_ingredients}</strong> ingredients detected
+                                </div>
+                                ${recipe.missing && recipe.missing.length > 0 ? `
+                                    <div class="detail-row missing">
+                                        <span>+</span> Also needed: ${recipe.missing.join(', ')}
+                                    </div>
+                                ` : `
+                                    <div class="detail-row" style="color: #34d399;">
+                                        <span>★</span> You have all needed ingredients!
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                    recipesGrid.appendChild(card);
+                });
+            } else if (data.recipeSuggestions) {
+                // Fallback for raw text
+                const card = document.createElement('div');
+                card.className = 'recipe-card';
+                card.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit; color: var(--text-main);">${data.recipeSuggestions}</pre>`;
+                recipesGrid.appendChild(card);
+            }
+
+            // Tip update
+            if (data.tip) {
+                tipContent.textContent = data.tip;
+                tipBox.style.display = 'flex';
+            }
+
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
+</body>
+</html>
