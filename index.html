@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Cooking Recipe Assistant - Smart Ingredient Detector</title>
-    <meta name="description" content="Detect fruits and vegetables using computer vision and get instant, matching recipe suggestions.">
+    <title>AI Cooking Recipe Assistant & Culinary Mini-Game</title>
+    <meta name="description" content="Detect fruits and vegetables using computer vision and get instant, matching recipe suggestions, or play the Culinary Mini-Game.">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,69 +19,149 @@
                 <span>✦</span> Computer Vision & AI Recipes
             </div>
             <h1>Smart Kitchen Assistant</h1>
-            <p>Snap or upload a photo of your vegetables and fruits. Our YOLO vision model detects your ingredients and curates the best recipes you can make right now.</p>
+            <p>Detect ingredients using our custom YOLO vision model or test your culinary skills in the Chef Pantry Mini-Game!</p>
         </header>
 
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" id="tabDetector" type="button">
+                <span>📷</span> AI Vision Detector
+            </button>
+            <button class="tab-btn" id="tabGame" type="button">
+                <span>🎮</span> Chef Cooking Game
+            </button>
+        </nav>
+
         <main class="main-content">
-            <!-- Upload Panel -->
-            <section class="glass-panel" id="uploadCard">
-                <form id="uploadForm">
-                    <div class="upload-zone" id="dropZone">
-                        <div class="upload-icon">📷</div>
-                        <h3>Upload ingredient photo</h3>
-                        <p>Drag and drop your image here, or <strong>click to browse</strong></p>
-                        <input type="file" id="imageInput" name="image" accept="image/*" required>
+            <!-- SECTION 1: AI Detector -->
+            <div id="detectorView">
+                <!-- Upload Panel -->
+                <section class="glass-panel" id="uploadCard">
+                    <form id="uploadForm">
+                        <div class="upload-zone" id="dropZone">
+                            <div class="upload-icon">📷</div>
+                            <h3>Upload ingredient photo</h3>
+                            <p>Drag and drop your image here, or <strong>click to browse</strong></p>
+                            <input type="file" id="imageInput" name="image" accept="image/*" required>
+                        </div>
+
+                        <!-- Image Preview Area -->
+                        <div class="preview-container" id="previewContainer">
+                            <img id="imagePreview" alt="Selected Produce Preview">
+                            <div class="scanner-laser" id="scannerLaser"></div>
+                        </div>
+
+                        <!-- Quick Sample Buttons -->
+                        <div class="quick-samples">
+                            <span>Try sample:</span>
+                            <button type="button" class="sample-btn" data-sample="samples/OIP.jpeg">Sample 1 (Produce)</button>
+                            <button type="button" class="sample-btn" data-sample="samples/OIP (1).jpeg">Sample 2 (Vegetables)</button>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="analyzeBtn" disabled>
+                            <span id="btnText">Detect Ingredients & Find Recipes</span>
+                        </button>
+                    </form>
+
+                    <!-- Error Box -->
+                    <div class="alert-box error" id="errorBox"></div>
+                </section>
+
+                <!-- Results Section -->
+                <section class="glass-panel results-section" id="resultsSection" style="margin-top: 24px;">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>🥕</span> Detected Ingredients
+                        </h2>
+                        <span id="itemsCountBadge" class="badge">0 found</span>
+                    </div>
+                    <div class="ingredients-tags" id="detectedItemsList"></div>
+
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            <span>📖</span> Recommended Recipes
+                        </h2>
+                    </div>
+                    <div class="recipes-grid" id="recipesGrid"></div>
+
+                    <!-- Chef's Tip Box -->
+                    <div class="tip-box" id="tipBox">
+                        <span class="tip-icon">💡</span>
+                        <span id="tipContent">Tip: Combine leftover vegetables into a nutritious soup or stir-fry!</span>
+                    </div>
+                </section>
+            </div>
+
+            <!-- SECTION 2: Master Chef Mini-Game -->
+            <div id="gameView" class="game-section">
+                <section class="glass-panel">
+                    <div class="game-stats">
+                        <div class="stat-item">
+                            <span>🏆 Score:</span>
+                            <span class="stat-value highlight" id="gameScore">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>🔥 Streak:</span>
+                            <span class="stat-value" id="gameStreak">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>🎯 Round:</span>
+                            <span class="stat-value" id="gameRound">1/8</span>
+                        </div>
                     </div>
 
-                    <!-- Image Preview Area -->
-                    <div class="preview-container" id="previewContainer">
-                        <img id="imagePreview" alt="Selected Produce Preview">
-                        <div class="scanner-laser" id="scannerLaser"></div>
+                    <div id="gamePlayArea" class="game-card">
+                        <h3 class="game-question">What delicious dish can you make with these ingredients?</h3>
+                        
+                        <div class="game-ingredients" id="gameIngredientsList">
+                            <!-- Dynamic ingredient badges -->
+                        </div>
+
+                        <div class="game-options-grid" id="gameOptionsGrid">
+                            <!-- Dynamic options -->
+                        </div>
+
+                        <div class="game-feedback" id="gameFeedback"></div>
+
+                        <button type="button" class="next-round-btn" id="nextRoundBtn">Next Recipe ➔</button>
                     </div>
 
-                    <!-- Quick Sample Buttons -->
-                    <div class="quick-samples">
-                        <span>Try sample:</span>
-                        <button type="button" class="sample-btn" data-sample="samples/OIP.jpeg">Sample 1 (Produce)</button>
-                        <button type="button" class="sample-btn" data-sample="samples/OIP (1).jpeg">Sample 2 (Vegetables)</button>
+                    <!-- Game Over Screen -->
+                    <div class="game-over-box" id="gameOverBox">
+                        <h2>🎉 Cooking Challenge Complete!</h2>
+                        <p id="gameOverSummary">You scored 80 points and earned the Executive Chef badge!</p>
+                        <button type="button" class="btn-primary" id="restartGameBtn" style="max-width: 260px; margin: 0 auto;">Play Again</button>
                     </div>
-
-                    <button type="submit" class="btn-primary" id="analyzeBtn" disabled>
-                        <span id="btnText">Detect Ingredients & Find Recipes</span>
-                    </button>
-                </form>
-
-                <!-- Error Box -->
-                <div class="alert-box error" id="errorBox"></div>
-            </section>
-
-            <!-- Results Section -->
-            <section class="glass-panel results-section" id="resultsSection">
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span>🥕</span> Detected Ingredients
-                    </h2>
-                    <span id="itemsCountBadge" class="badge">0 found</span>
-                </div>
-                <div class="ingredients-tags" id="detectedItemsList"></div>
-
-                <div class="section-header">
-                    <h2 class="section-title">
-                        <span>📖</span> Recommended Recipes
-                    </h2>
-                </div>
-                <div class="recipes-grid" id="recipesGrid"></div>
-
-                <!-- Chef's Tip Box -->
-                <div class="tip-box" id="tipBox">
-                    <span class="tip-icon">💡</span>
-                    <span id="tipContent">Tip: Combine leftover vegetables into a nutritious soup or stir-fry!</span>
-                </div>
-            </section>
+                </section>
+            </div>
         </main>
     </div>
 
     <script>
+        // Tab Navigation
+        const tabDetector = document.getElementById('tabDetector');
+        const tabGame = document.getElementById('tabGame');
+        const detectorView = document.getElementById('detectorView');
+        const gameView = document.getElementById('gameView');
+
+        tabDetector.addEventListener('click', () => {
+            tabDetector.classList.add('active');
+            tabGame.classList.remove('active');
+            detectorView.style.display = 'block';
+            gameView.style.display = 'none';
+        });
+
+        tabGame.addEventListener('click', () => {
+            tabGame.classList.add('active');
+            tabDetector.classList.remove('active');
+            detectorView.style.display = 'none';
+            gameView.style.display = 'block';
+            if (currentRound === 0) {
+                startNewGame();
+            }
+        });
+
+        // Detector Logic
         const dropZone = document.getElementById('dropZone');
         const imageInput = document.getElementById('imageInput');
         const previewContainer = document.getElementById('previewContainer');
@@ -101,10 +181,8 @@
 
         let selectedFile = null;
 
-        // Click on dropZone triggers hidden input
         dropZone.addEventListener('click', () => imageInput.click());
 
-        // Drag & Drop handlers
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -134,7 +212,6 @@
             }
         });
 
-        // Quick sample images handling
         document.querySelectorAll('.sample-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -173,7 +250,6 @@
             reader.readAsDataURL(file);
         }
 
-        // Form submission
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!selectedFile) {
@@ -233,7 +309,8 @@
             tomato: '🍅', potato: '🥔', carrot: '🥕', onion: '🧅', garlic: '🧄',
             broccoli: '🥦', cabbage: '🥬', lettuce: '🥗', cucumber: '🥒',
             bell_pepper: '🫑', 'bell pepper': '🫑', corn: '🌽', mushroom: '🍄',
-            apple: '🍎', ginger: '🫚', pumpkin: '🎃', spinach: '🍃', celery: '🥬'
+            apple: '🍎', ginger: '🫚', pumpkin: '🎃', spinach: '🍃', celery: '🥬',
+            basil: '🌿', cheese: '🧀', mozzarella: '🧀'
         };
 
         function getEmoji(item) {
@@ -259,7 +336,6 @@
                 });
             }
 
-            // Structured recipes rendering
             if (data.recipes && data.recipes.length > 0) {
                 data.recipes.forEach(recipe => {
                     const card = document.createElement('div');
@@ -297,14 +373,12 @@
                     recipesGrid.appendChild(card);
                 });
             } else if (data.recipeSuggestions) {
-                // Fallback for raw text
                 const card = document.createElement('div');
                 card.className = 'recipe-card';
                 card.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit; color: var(--text-main);">${data.recipeSuggestions}</pre>`;
                 recipesGrid.appendChild(card);
             }
 
-            // Tip update
             if (data.tip) {
                 tipContent.textContent = data.tip;
                 tipBox.style.display = 'flex';
@@ -313,6 +387,180 @@
             resultsSection.style.display = 'block';
             resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+
+        // ========================
+        // CHEF MINI-GAME LOGIC
+        // ========================
+        const gameQuestions = [
+            {
+                ingredients: ["carrot", "potato", "onion", "tomato"],
+                correct: "Vegetable Soup",
+                options: ["Vegetable Soup", "Apple Pie", "Greek Salad", "Caesar Salad"],
+                tip: "Soups are ideal for simmering root vegetables and onions together."
+            },
+            {
+                ingredients: ["tomato", "mozzarella", "basil"],
+                correct: "Caprese Salad",
+                options: ["Caprese Salad", "Broccoli Cheese Soup", "Vegetable Stir Fry", "Pumpkin Soup"],
+                tip: "Caprese represents the colors of the Italian flag with fresh basil, mozzarella, and tomatoes!"
+            },
+            {
+                ingredients: ["broccoli", "garlic", "ginger", "carrot"],
+                correct: "Broccoli Stir Fry",
+                options: ["Broccoli Stir Fry", "Coleslaw", "Potato Salad", "Minestrone"],
+                tip: "Quick high-heat stir frying retains both the crunch and bright green chlorophyll of broccoli."
+            },
+            {
+                ingredients: ["pumpkin", "onion", "carrot", "potato"],
+                correct: "Pumpkin Soup",
+                options: ["Pumpkin Soup", "Gazpacho", "Tabbouleh", "Waldorf Salad"],
+                tip: "Roasting pumpkin before blending produces a richer, caramelized flavor in soups."
+            },
+            {
+                ingredients: ["tomato", "cucumber", "bell pepper", "onion", "olives"],
+                correct: "Greek Salad",
+                options: ["Greek Salad", "Split Pea Soup", "Cabbage Stir Fry", "Mushroom Soup"],
+                tip: "Authentic Greek salad (Horiatiki) is served with olive oil, oregano, and blocks of feta."
+            },
+            {
+                ingredients: ["cabbage", "carrot", "onion", "mayonnaise"],
+                correct: "Coleslaw",
+                options: ["Coleslaw", "Beetroot Soup", "Zucchini Stir Fry", "Gazpacho"],
+                tip: "Coleslaw gets its crunch and tangy bite from shredded cabbage and creamy dressing."
+            },
+            {
+                ingredients: ["mushroom", "garlic", "onion", "thyme"],
+                correct: "Mushroom Soup",
+                options: ["Mushroom Soup", "Waldorf Salad", "Caprese Salad", "Corn Salad"],
+                tip: "Fresh thyme and sautéed garlic provide the deep savory umami in mushroom soup."
+            },
+            {
+                ingredients: ["tomato", "cucumber", "bell pepper", "garlic"],
+                correct: "Gazpacho",
+                options: ["Gazpacho", "Broccoli Cheese Soup", "Potato Salad", "Minestrone"],
+                tip: "Gazpacho is an iconic Spanish cold soup made from raw blended garden produce!"
+            }
+        ];
+
+        let currentRound = 0;
+        let gameScore = 0;
+        let gameStreak = 0;
+        const totalRounds = 8;
+
+        const gameScoreEl = document.getElementById('gameScore');
+        const gameStreakEl = document.getElementById('gameStreak');
+        const gameRoundEl = document.getElementById('gameRound');
+        const gameIngredientsList = document.getElementById('gameIngredientsList');
+        const gameOptionsGrid = document.getElementById('gameOptionsGrid');
+        const gameFeedback = document.getElementById('gameFeedback');
+        const nextRoundBtn = document.getElementById('nextRoundBtn');
+        const gamePlayArea = document.getElementById('gamePlayArea');
+        const gameOverBox = document.getElementById('gameOverBox');
+        const gameOverSummary = document.getElementById('gameOverSummary');
+        const restartGameBtn = document.getElementById('restartGameBtn');
+
+        function startNewGame() {
+            currentRound = 0;
+            gameScore = 0;
+            gameStreak = 0;
+            gameScoreEl.textContent = '0';
+            gameStreakEl.textContent = '0';
+            gameOverBox.style.display = 'none';
+            gamePlayArea.style.display = 'block';
+            loadRound();
+        }
+
+        function loadRound() {
+            nextRoundBtn.style.display = 'none';
+            gameFeedback.innerHTML = '';
+            gameFeedback.className = 'game-feedback';
+
+            const q = gameQuestions[currentRound];
+            gameRoundEl.textContent = `${currentRound + 1}/${totalRounds}`;
+
+            // Render ingredients
+            gameIngredientsList.innerHTML = '';
+            q.ingredients.forEach(ing => {
+                const el = document.createElement('div');
+                el.className = 'game-ing-card';
+                el.innerHTML = `<span>${getEmoji(ing)}</span> ${ing.charAt(0).toUpperCase() + ing.slice(1)}`;
+                gameIngredientsList.appendChild(el);
+            });
+
+            // Render options (shuffled)
+            gameOptionsGrid.innerHTML = '';
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            shuffledOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'game-option-btn';
+                btn.innerHTML = `<span>${opt}</span> <span class="opt-icon">➔</span>`;
+                btn.addEventListener('click', () => handleOptionClick(btn, opt, q));
+                gameOptionsGrid.appendChild(btn);
+            });
+        }
+
+        function handleOptionClick(selectedBtn, selectedOption, q) {
+            // Disable all option buttons
+            const allBtns = gameOptionsGrid.querySelectorAll('.game-option-btn');
+            allBtns.forEach(b => b.disabled = true);
+
+            if (selectedOption === q.correct) {
+                selectedBtn.classList.add('correct');
+                selectedBtn.querySelector('.opt-icon').textContent = '✓';
+                gameScore += 10 + (gameStreak * 2);
+                gameStreak += 1;
+                gameFeedback.innerHTML = `<span style="color: #34d399;">🌟 Spot on! It makes <strong>${q.correct}</strong>! (+${10 + ((gameStreak - 1) * 2)} pts)</span>`;
+            } else {
+                selectedBtn.classList.add('wrong');
+                selectedBtn.querySelector('.opt-icon').textContent = '✗';
+                gameStreak = 0;
+                // Highlight correct
+                allBtns.forEach(b => {
+                    if (b.textContent.includes(q.correct)) {
+                        b.classList.add('correct');
+                        b.querySelector('.opt-icon').textContent = '✓';
+                    }
+                });
+                gameFeedback.innerHTML = `<span style="color: #fca5a5;">Not quite! The best match is <strong>${q.correct}</strong>.</span>`;
+            }
+
+            gameScoreEl.textContent = gameScore;
+            gameStreakEl.textContent = gameStreak;
+
+            if (currentRound + 1 < totalRounds) {
+                nextRoundBtn.textContent = 'Next Recipe ➔';
+                nextRoundBtn.style.display = 'block';
+            } else {
+                nextRoundBtn.textContent = 'View Final Results 🏆';
+                nextRoundBtn.style.display = 'block';
+            }
+        }
+
+        nextRoundBtn.addEventListener('click', () => {
+            currentRound++;
+            if (currentRound < totalRounds) {
+                loadRound();
+            } else {
+                endGame();
+            }
+        });
+
+        function endGame() {
+            gamePlayArea.style.display = 'none';
+            gameOverBox.style.display = 'block';
+
+            let rank = 'Culinary Apprentice 🍳';
+            if (gameScore >= 90) rank = 'Executive 3-Star Master Chef 🌟👨‍🍳';
+            else if (gameScore >= 60) rank = 'Sous Chef Extraordinaire 🥗';
+            else if (gameScore >= 30) rank = 'Line Cook Prodigy 🥕';
+
+            gameOverSummary.innerHTML = `You completed all 8 rounds with <strong>${gameScore} points</strong>!<br><br>Chef Rank: <span style="color: var(--primary); font-size: 1.3rem; font-weight: 800;">${rank}</span>`;
+        }
+
+        restartGameBtn.addEventListener('click', () => {
+            startNewGame();
+        });
     </script>
 </body>
 </html>
